@@ -3,7 +3,9 @@
   (:documentation "GNU Social client")
   (:export #:load-user
            #:timeline
-           #:subscriptions))
+           #:subscriptions
+           #:*credentials*
+           #:credentials))
 
 (defpackage :status-net-clim
   (:use :cl)

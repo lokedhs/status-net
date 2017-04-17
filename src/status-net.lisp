@@ -37,19 +37,19 @@
   "Default credentials")
 
 (defclass user ()
-  ((timeline-url      :type string
+  ((timeline-url      :type (or null string)
                       :initform nil
                       :initarg :timeline-url
                       :reader user/timeline-url)
-   (subscriptions-url :type string
+   (subscriptions-url :type (or null string)
                       :initform nil
                       :initarg :subscriptions-url
                       :reader user/subscriptions-url)
-   (favourites-url    :type string
+   (favourites-url    :type (or null string)
                       :initform nil
                       :initarg :favourites-url
                       :reader user/favourites-url)
-   (memberships-url   :type string
+   (memberships-url   :type (or null string)
                       :initform nil
                       :initarg :memberships-url
                       :reader user/memberships-url)))
@@ -69,6 +69,21 @@
                           "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/favorite']/@href")
   (update-slot-from-xpath user 'memberships-url doc
                           "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/join']/@href"))
+
+(defclass post ()
+  ((id :type string)
+   (title :type string)
+   (published :type string)
+   (updated :type string)))
+
+(defmethod initialize-instance :after ((obj post) &key doc)
+  (update-slot-from-xpath obj 'id doc "atom:id/text()")
+  (update-slot-from-xpath obj 'title doc "atom:title/text()")
+  (update-slot-from-xpath obj 'published doc "atom:published/text()")
+  (update-slot-from-xpath obj 'updated doc "atom:updated/text()"))
+
+(defun parse-post (doc)
+  (make-instance 'post :doc doc))
 
 (defun send-request (url cred)
   (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
@@ -93,7 +108,9 @@
     (make-instance 'user :doc doc)))
 
 (defun timeline (user &key (cred *credentials*))
-  (send-request (user/timeline-url user) cred))
+  (let ((doc (send-request (user/timeline-url user) cred)))
+    (with-status-net-namespaces
+      (xpath:map-node-set->list #'parse-post (xpath:evaluate "/atom:feed/atom:entry" doc)))))
 
 (defun subscriptions (user &key (cred *credentials*))
   (send-request (user/subscriptions-url user) cred))
