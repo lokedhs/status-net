@@ -82,8 +82,26 @@
   (update-slot-from-xpath obj 'published doc "atom:published/text()")
   (update-slot-from-xpath obj 'updated doc "atom:updated/text()"))
 
+(defmethod print-object ((obj post) stream)
+  (print-unreadable-safely (id title) obj stream
+    (format stream "ID ~s TITLE ~s" id title)))
+
 (defun parse-post (doc)
   (make-instance 'post :doc doc))
+
+(defvar *debug-requests* nil)
+
+(defun display-stream-if-debug (stream)
+  (when *debug-requests*
+    (format *debug-io* "~&====== ERROR OUTPUT ======~%")
+    (let ((input (flexi-streams:make-flexi-stream stream
+                                                  :external-format :UTF8
+                                                  :element-type 'character)))
+      (loop
+        for s = (read-line input nil nil)
+        while s
+        do (format *debug-io* "~a~%" s)))
+    (format *debug-io* "~&====== END OF ERROR OUTPUT ======~%")))
 
 (defun send-request (url cred)
   (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
@@ -96,6 +114,7 @@
     (unwind-protect
          (progn
            (unless (= code 200)
+             (display-stream-if-debug stream)
              (error 'status-net-response-error :code code :text reason-string))
            (let ((doc (cxml:parse-stream stream (cxml-dom:make-dom-builder))))
              doc))
