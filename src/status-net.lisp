@@ -89,16 +89,18 @@
   (:metaclass atom-entity-class))
 
 (defclass post ()
-  ((id           :type string
+  ((id           :type (or null string)
                  :xpath "atom:id/text()")
-   (title        :type string
+   (title        :type (or null string)
                  :xpath "atom:title/text()")
-   (published    :type string
+   (published    :type (or null string)
                  :xpath "atom:published/text()")
-   (updated      :type string
+   (updated      :type (or null string)
                  :xpath "atom:updated/text()")
-   (conversation :type string
-                 :xpath "ostatus:conversation/text()"))
+   (conversation :type (or null string)
+                 :xpath "ostatus:conversation/text()")
+   (content-html :type (or null string)
+                 :xpath "atom:content[@type='html']/text()"))
   (:metaclass atom-entity-class))
 
 (defclass note (post)

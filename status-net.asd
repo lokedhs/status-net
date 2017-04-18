@@ -8,7 +8,8 @@
                :mcclim
                :closure-html
                :closer-mop
-               :string-case)
+               :string-case
+               :bordeaux-threads)
   :components ((:module "src"
                         :serial t
                         :components ((:file "package")
