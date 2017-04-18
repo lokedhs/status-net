@@ -9,10 +9,16 @@
                                           ("media" "http://purl.org/syndication/atommedia")
                                           ("poco" "http://portablecontacts.net/spec/1.0")
                                           ("ostatus" "http://ostatus.org/schema/1.0")
-                                          ("statusnet" "http://status.net/schema/api/1/"))))
+                                          ("statusnet" "http://status.net/schema/api/1/")))
+  (defparameter *html-namespace* "http://www.w3.org/1999/xhtml")
+  (defparameter *html-namespaces* (list (list "h" *html-namespace*))))
 
 (defmacro with-status-net-namespaces (&body body)
   `(xpath:with-namespaces ,*status-net-namespaces*
+     ,@body))
+
+(defmacro with-html-namespaces (&body body)
+  `(xpath:with-namespaces ,*html-namespaces*
      ,@body))
 
 (defmacro print-unreadable-safely ((&rest slots) object stream &body body)
@@ -29,3 +35,14 @@
                                  slots)
          (print-unreadable-object (,object-copy ,stream-copy :type t :identity nil)
            ,@body)))))
+
+(defun value-by-xpath (expression node &key (default-value nil default-value-assigned-p))
+  (let ((result (xpath:evaluate expression node)))
+    (if (xpath:node-set-empty-p result)
+        (if default-value-assigned-p
+            default-value
+            (error "No value found for expression: ~s" expression))
+        (dom:node-value (xpath:first-node result)))))
+
+(defun debug-print-dom (doc &optional (stream *standard-output*))
+  (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc))

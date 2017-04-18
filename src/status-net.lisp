@@ -70,13 +70,56 @@
   (update-slot-from-xpath user 'memberships-url doc
                           "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/join']/@href"))
 
-(defclass post ()
-  ((id :type string)
-   (title :type string)
-   (published :type string)
-   (updated :type string)))
+(defun fill-in-xpath-content (class-name doc)
+  (with-status-net-namespaces
+    (let* ((class (find-class class-name))
+           (obj (make-instance class)))
+      (loop
+        for slot in (closer-mop:class-slots class)
+        when (typep slot 'atom-entity-class-effective-slot-definition)
+          do (let ((xpath (atom-slot/xpath slot)))
+               (when xpath
+                 (let ((result (xpath:evaluate xpath doc)))
+                   (unless (xpath:node-set-empty-p result)
+                     (setf (closer-mop:slot-value-using-class class obj slot) (dom:node-value (xpath:first-node result))))))))
+      obj)))
 
-(defmethod initialize-instance :after ((obj post) &key doc)
+(defclass feed (atom-entity)
+  ()
+  (:metaclass atom-entity-class))
+
+(defclass post ()
+  ((id           :type string
+                 :xpath "atom:id/text()")
+   (title        :type string
+                 :xpath "atom:title/text()")
+   (published    :type string
+                 :xpath "atom:published/text()")
+   (updated      :type string
+                 :xpath "atom:updated/text()")
+   (conversation :type string
+                 :xpath "ostatus:conversation/text()"))
+  (:metaclass atom-entity-class))
+
+(defclass note (post)
+  ()
+  (:metaclass atom-entity-class))
+
+(defclass comment (post)
+  ((in-reply-to-ref :xpath "thr:in-reply-to/@ref")
+   (in-reply-to-url :xpath "thr:in-reply-to/@href"))
+  (:metaclass atom-entity-class))
+
+(defclass author (atom-entity)
+  ((uri :xpath "atom:uri/text()")
+   (name :xpath "atom:name/text()")
+   (preferred-user-name :xpath "poco:preferredUsername/text()")
+   (display-name :xpath "poco:displayName/text()")
+   (profile-info :xpath "statusnet:profile_info/@local_id")
+   (subscribers-url :xpath "atom:followers/@url"))
+  (:metaclass atom-entity-class))
+
+#+nil(defmethod initialize-instance :after ((obj post) &key doc)
   (update-slot-from-xpath obj 'id doc "atom:id/text()")
   (update-slot-from-xpath obj 'title doc "atom:title/text()")
   (update-slot-from-xpath obj 'published doc "atom:published/text()")
@@ -86,8 +129,23 @@
   (print-unreadable-safely (id title) obj stream
     (format stream "ID ~s TITLE ~s" id title)))
 
-(defun parse-post (doc)
-  (make-instance 'post :doc doc))
+(defun parse-feed-entry (node)
+  (let* ((object-type (value-by-xpath "activity:object-type/text()" node))
+         (name (string-case:string-case (object-type)
+                 ("http://activitystrea.ms/schema/1.0/comment" 'comment)
+                 ("http://activitystrea.ms/schema/1.0/note" 'note)
+                 (t nil))))
+    (when name
+      (fill-in-xpath-content name node))))
+
+(defun parse-feed (doc)
+  (with-status-net-namespaces
+    (let ((result nil))
+      (xpath:do-node-set (node (xpath:evaluate "atom:feed/atom:entry" doc))
+        (let ((entry (parse-feed-entry node)))
+          (when entry
+            (push entry result))))
+      (reverse result))))
 
 (defvar *debug-requests* nil)
 
@@ -103,13 +161,15 @@
         do (format *debug-io* "~a~%" s)))
     (format *debug-io* "~&====== END OF ERROR OUTPUT ======~%")))
 
-(defun send-request (url cred)
+(defun send-request (url &optional cred)
   (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
       (drakma:http-request url
                            :want-stream t
                            :force-binary t
-                           :basic-authorization (list (credentials/user cred)
-                                                      (credentials/password cred)))
+                           :basic-authorization (if cred
+                                                    (list (credentials/user cred)
+                                                          (credentials/password cred))
+                                                    nil))
     (declare (ignore content return-headers url-reply))
     (unwind-protect
          (progn
@@ -134,5 +194,17 @@
 (defun subscriptions (user &key (cred *credentials*))
   (send-request (user/subscriptions-url user) cred))
 
-(defun debug-print-dom (doc &optional (stream *standard-output*))
-  (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc))
+(defun find-atom-url-from-html (url)
+  (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
+      (drakma:http-request url :want-stream t)
+    (declare (ignore content return-headers url-reply))
+    (unwind-protect
+         (progn
+           (unless (= code 200)
+             (error 'status-net-response-error :code code :text reason-string))
+           (let ((doc (closure-html:parse stream (cxml-dom:make-dom-builder))))
+             (with-html-namespaces
+               (let ((atom-url (value-by-xpath "//h:link[@type='application/atom+xml'][@rel='alternate']/@href" doc)))
+                 atom-url))))
+      (when need-close
+        (close stream)))))
