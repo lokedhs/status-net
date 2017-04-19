@@ -45,4 +45,5 @@
         (dom:node-value (xpath:first-node result)))))
 
 (defun debug-print-dom (doc &optional (stream *standard-output*))
-  (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc))
+  (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc)
+  nil)

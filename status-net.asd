@@ -16,4 +16,5 @@
                                      (:file "xml-misc")
                                      (:file "metaclasses")
                                      (:file "status-net")
+                                     (:file "clim-misc")
                                      (:file "clim")))))
