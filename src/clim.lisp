@@ -30,11 +30,6 @@
 (defmethod user-ref/url ((ref mention-link))
   (text-link/href ref))
 
-(clim:define-presentation-to-command-translator select-user
-    (user-ref show-user activity-list-frame)
-    (obj)
-  (list obj))
-
 (clim:define-presentation-method clim:present (obj (type text-link) stream (view t) &key)
   (clim:with-drawing-options (stream :ink *link-colour*)
     (present-node-list (text-link/content obj) stream)))
@@ -134,11 +129,20 @@
 
 (define-activity-list-frame-command (show-feed-from-url :name "Load feed from URL")
     ((url 'string))
-  (show-feed-url url))
+  (handler-case
+      (show-feed-url url)
+    (error (condition)
+      (let ((interactor (clim:find-pane-named clim:*application-frame* 'interaction-pane)))
+        (format interactor "Error loading feed: ~a" condition)))))
 
 (define-activity-list-frame-command (show-user :name "Load user feed")
     ((user 'user-ref))
   (show-feed-url (user-ref/url user)))
+
+(clim:define-presentation-to-command-translator select-user
+    (user-ref show-user activity-list-frame)
+    (obj)
+  (list obj))
 
 (defun status-net-clim ()
   (let ((frame (clim:make-application-frame 'activity-list-frame

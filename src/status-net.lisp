@@ -261,6 +261,6 @@
                               (let ((atom-url (value-by-xpath "//h:link[@type='application/atom+xml'][@rel='alternate']/@href" doc)))
                                 (send-request atom-url)))))
              ("application/atom+xml" (cxml:parse-stream stream (cxml-dom:make-dom-builder)))
-             (t (error 'status-net-error (format nil "Unknown content type for url: ~s" url)))))
+             (t (error 'status-net-error :message (format nil "Unknown content type for url: ~s" url)))))
       (when need-close
         (close stream)))))
