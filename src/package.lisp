@@ -21,6 +21,10 @@
            #:author/subscribers-url
            #:load-feed))
 
+(defpackage :status-net-mastodon
+  (:use :cl)
+  (:documentation "Mastodon support for status-net")
+  (:export #:status-net-clim))
 (defpackage :status-net-clim
   (:use :cl)
   (:documentation "CLIM client for status-net")
