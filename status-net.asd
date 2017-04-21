@@ -17,6 +17,5 @@
                                      (:file "xml-misc")
                                      (:file "metaclasses")
                                      (:file "status-net")
-                                     (:file "mastodon")
                                      (:file "clim-misc")
                                      (:file "clim")))))
