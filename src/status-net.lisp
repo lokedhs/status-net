@@ -264,3 +264,26 @@
              (t (error 'status-net-error :message (format nil "Unknown content type for url: ~s" url)))))
       (when need-close
         (close stream)))))
+
+(defun load-webfinger (url)
+  (let* ((uri (puri:uri url))
+         (scheme (puri:uri-scheme uri)))
+    (unless (or (eq scheme :http)
+                (eq scheme :https))
+      (error "Unknown scheme: ~s" scheme))
+    (multiple-value-bind (content code return-headers url-reply stream need-close reason-string)
+        (drakma:http-request (format nil "~a://~a/.well-known/webfinger"
+                                     (ecase scheme
+                                       (:http "http")
+                                       (:https "https"))
+                                     (puri:uri-host uri))
+                             :parameters `(("resource" . ,url)))
+      (declare (ignore return-headers url-reply stream need-close))
+      (unless (= code 200)
+        (error "Error loading webfinger content. Code: ~a, reason: ~a" code reason-string))
+      (let ((json (yason:parse (babel:octets-to-string content :encoding :utf-8))))
+        (loop
+          with prefix = "acct:"
+          for a in (gethash "aliases" json)
+          when (alexandria:starts-with-subseq prefix a)
+            return (subseq a (length prefix)))))))

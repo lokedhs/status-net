@@ -19,7 +19,8 @@
            #:author/profile-info
            #:author/summary
            #:author/subscribers-url
-           #:load-feed))
+           #:load-feed
+           #:load-webfinger))
 
 (defpackage :status-net-clim
   (:use :cl)
