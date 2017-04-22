@@ -281,9 +281,13 @@
       (declare (ignore return-headers url-reply stream need-close))
       (unless (= code 200)
         (error "Error loading webfinger content. Code: ~a, reason: ~a" code reason-string))
-      (let ((json (yason:parse (babel:octets-to-string content :encoding :utf-8))))
-        (loop
-          with prefix = "acct:"
-          for a in (gethash "aliases" json)
-          when (alexandria:starts-with-subseq prefix a)
-            return (subseq a (length prefix)))))))
+      (let* ((json (yason:parse (babel:octets-to-string content :encoding :utf-8)))
+             (subject (gethash "subject" json))
+             (prefix "acct:"))
+        (if (alexandria:starts-with-subseq prefix subject)
+            (subseq subject (length prefix))
+            ;; ELSE: The subject is not an acct link, search the aliases
+            (loop
+              for a in (gethash "aliases" json)
+              when (alexandria:starts-with-subseq prefix a)
+                return (subseq a (length prefix))))))))
