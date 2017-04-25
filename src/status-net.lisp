@@ -39,23 +39,6 @@
 (defvar *credentials* nil
   "Default credentials")
 
-#+nil(defclass user ()
-  ((timeline-url      :type (or null string)
-                      :initform nil
-                      :initarg :timeline-url
-                      :reader user/timeline-url)
-   (subscriptions-url :type (or null string)
-                      :initform nil
-                      :initarg :subscriptions-url
-                      :reader user/subscriptions-url)
-   (favourites-url    :type (or null string)
-                      :initform nil
-                      :initarg :favourites-url
-                      :reader user/favourites-url)
-   (memberships-url   :type (or null string)
-                      :initform nil
-                      :initarg :memberships-url
-                      :reader user/memberships-url)))
 (defclass timestamp-node ()
   ((published    :type (or null string)
                  :reader post/published
@@ -63,22 +46,6 @@
    (updated      :type (or null string)
                  :xpath "atom:updated/text()"))
   (:metaclass atom-entity-class))
-
-#+nil(defun update-slot-from-xpath (obj slot doc xpath)
-  (with-status-net-namespaces
-    (let ((timeline (xpath:evaluate xpath doc)))
-      (unless (xpath:node-set-empty-p timeline)
-        (setf (slot-value obj slot) (dom:node-value (xpath:first-node timeline)))))))
-
-#+nil(defmethod initialize-instance :after ((user user) &key doc)
-  (update-slot-from-xpath user 'timeline-url doc
-                          "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/post']/@href")
-  (update-slot-from-xpath user 'subscriptions-url doc
-                          "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/follow']/@href")
-  (update-slot-from-xpath user 'favourites-url doc
-                          "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/favorite']/@href")
-  (update-slot-from-xpath user 'memberships-url doc
-                          "/app:service/app:workspace/app:collection[activity:verb='http://activitystrea.ms/schema/1.0/join']/@href"))
 
 (defun fill-in-xpath-content (class-name doc)
   (with-status-net-namespaces
@@ -91,7 +58,11 @@
                (when xpath
                  (let ((result (xpath:evaluate xpath doc)))
                    (unless (xpath:node-set-empty-p result)
-                     (setf (closer-mop:slot-value-using-class class obj slot) (dom:node-value (xpath:first-node result))))))))
+                     (let ((node-parser (atom-slot/node-parser slot)))
+                       (setf (closer-mop:slot-value-using-class class obj slot)
+                             (if node-parser
+                                 (funcall node-parser result)
+                                 (dom:node-value (xpath:first-node result))))))))))
       obj)))
 
 (defclass feed (atom-entity)
@@ -120,6 +91,33 @@
    (in-reply-to-url :xpath "thr:in-reply-to/@href"))
   (:metaclass atom-entity-class))
 
+(defclass avatar ()
+  ((url       :initarg :url
+              :reader avatar/url)
+   (width     :initarg :width
+              :reader avatar/width)
+   (height    :initarg :height
+              :reader avatar/height)
+   (mime-type :initarg :mime-type
+              :reader avatar/mime-type)))
+
+(defmethod print-object ((obj avatar) stream)
+  (print-unreadable-object (obj stream :type t)
+    (format stream "~s TYPE ~s ~ax~a"
+            (avatar/url obj)
+            (avatar/mime-type obj)
+            (avatar/width obj)
+            (avatar/height obj))))
+
+(defun parse-avatar (nodes)
+  (xpath:map-node-set->list (lambda (node)
+                              (make-instance 'avatar
+                                             :url (dom:get-attribute node "href")
+                                             :width (parse-integer (dom:get-attribute-ns node "http://purl.org/syndication/atommedia" "width"))
+                                             :height (parse-integer (dom:get-attribute-ns node "http://purl.org/syndication/atommedia" "height"))
+                                             :mime-type (dom:get-attribute node "type")))
+                            nodes))
+
 (defclass author (atom-entity)
   ((uri                 :xpath "atom:uri/text()"
                         :reader author/uri)
@@ -130,11 +128,17 @@
    (display-name        :xpath "poco:displayName/text()"
                         :reader author/display-name)
    (profile-info        :xpath "statusnet:profile_info/@local_id"
+                        :initform ""
                         :reader author/profile-info)
    (summary             :xpath "atom:summary/text()"
+                        :initform ""
                         :reader author/summary)
    (subscribers-url     :xpath "atom:followers/@url"
-                        :reader author/subscribers-url))
+                        :reader author/subscribers-url)
+   (avatar              :xpath "atom:link[@rel='avatar']"
+                        :node-parser parse-avatar
+                        :initform nil
+                        :reader author/avatar))
   (:metaclass atom-entity-class))
 
 (defmethod print-object ((obj post) stream)

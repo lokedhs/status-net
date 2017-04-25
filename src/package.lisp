@@ -20,7 +20,13 @@
            #:author/summary
            #:author/subscribers-url
            #:load-feed
-           #:load-webfinger))
+           #:load-webfinger
+           #:author/avatar
+           #:avatar
+           #:avatar/url
+           #:avatar/width
+           #:avatar/height
+           #:avatar/mime-type))
 
 (defpackage :status-net-clim
   (:use :cl)
