@@ -57,12 +57,15 @@
           do (let ((xpath (atom-slot/xpath slot)))
                (when xpath
                  (let ((result (xpath:evaluate xpath doc)))
-                   (unless (xpath:node-set-empty-p result)
-                     (let ((node-parser (atom-slot/node-parser slot)))
-                       (setf (closer-mop:slot-value-using-class class obj slot)
-                             (if node-parser
-                                 (funcall node-parser result)
-                                 (dom:node-value (xpath:first-node result))))))))))
+                   (cond ((xpath:node-set-empty-p result)
+                          (setf (closer-mop:slot-value-using-class class obj slot)
+                                (atom-slot/xpath-default-value slot)))
+                         (t
+                          (let ((node-parser (atom-slot/node-parser slot)))
+                            (setf (closer-mop:slot-value-using-class class obj slot)
+                                  (if node-parser
+                                      (funcall node-parser result)
+                                      (dom:node-value (xpath:first-node result)))))))))))
       obj)))
 
 (defclass feed (atom-entity)
@@ -133,6 +136,8 @@
    (summary             :xpath "atom:summary/text()"
                         :initform ""
                         :reader author/summary)
+   (summary-type        :xpath "atom:summary/@type"
+                        :reader author/summary-type)
    (subscribers-url     :xpath "atom:followers/@url"
                         :reader author/subscribers-url)
    (avatar              :xpath "atom:link[@rel='avatar']"

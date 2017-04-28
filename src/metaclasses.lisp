@@ -10,14 +10,17 @@
   t)
 
 (defclass atom-entity-class-slot-definition-mixin ()
-  ((xpath       :type (or null string)
-                :initform nil
-                :initarg :xpath
-                :accessor atom-slot/xpath)
-   (node-parser :type (or null symbol function)
-                :initform nil
-                :initarg :node-parser
-                :accessor atom-slot/node-parser)))
+  ((xpath               :type (or null string)
+                        :initform nil
+                        :initarg :xpath
+                        :accessor atom-slot/xpath)
+   (xpath-default-value :initform nil
+                        :initarg :xpath-default-value
+                        :accessor atom-slot/xpath-default-value)
+   (node-parser         :type (or null symbol function)
+                        :initform nil
+                        :initarg :node-parser
+                        :accessor atom-slot/node-parser)))
 
 (defclass atom-entity-class-direct-slot-definition (atom-entity-class-slot-definition-mixin
                                                     closer-mop:standard-direct-slot-definition)
@@ -45,6 +48,7 @@
 (defmethod closer-mop:compute-effective-slot-definition ((class atom-entity-class) slot-name direct-slots)
   (let ((result (call-next-method)))
     (setf (atom-slot/xpath result) (ensure-slot-value (car direct-slots) 'xpath nil))
+    (setf (atom-slot/xpath-default-value result) (ensure-slot-value (car direct-slots) 'xpath-default-value nil))
     (setf (atom-slot/node-parser result) (ensure-slot-value (car direct-slots) 'node-parser nil))
     result))
 
