@@ -74,6 +74,7 @@
 
 (defclass post (timestamp-node)
   ((id           :type (or null string)
+                 :reader post/id
                  :xpath "atom:id/text()")
    (title        :type (or null string)
                  :reader post/title
@@ -82,7 +83,10 @@
                  :xpath "ostatus:conversation/text()")
    (content-html :type (or null string)
                  :reader post/content-html
-                 :xpath "atom:content[@type='html']/text()"))
+                 :xpath "atom:content[@type='html']/text()")
+   (alternate-url :type (or null string)
+                  :reader post/alternate-url
+                  :xpath "atom:link[@rel='alternate'][@type='text/html']/@href"))
   (:metaclass atom-entity-class))
 
 (defclass note (post)

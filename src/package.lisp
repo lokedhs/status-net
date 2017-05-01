@@ -27,7 +27,9 @@
            #:avatar/width
            #:avatar/height
            #:avatar/mime-type
-           #:author/summary-type))
+           #:author/summary-type
+           #:post/id
+           #:post/alternate-url))
 
 (defpackage :status-net-clim
   (:use :cl)
