@@ -30,8 +30,3 @@
            #:author/summary-type
            #:post/id
            #:post/alternate-url))
-
-(defpackage :status-net-clim
-  (:use :cl)
-  (:documentation "CLIM client for status-net")
-  (:export #:status-net-clim))

@@ -5,7 +5,6 @@
   :depends-on (:drakma
                :cxml
                :xpath
-               :mcclim
                :closure-html
                :closer-mop
                :string-case
@@ -16,6 +15,4 @@
                         :components ((:file "package")
                                      (:file "xml-misc")
                                      (:file "metaclasses")
-                                     (:file "status-net")
-                                     (:file "clim-misc")
-                                     (:file "clim")))))
+                                     (:file "status-net")))))
