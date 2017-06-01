@@ -29,4 +29,7 @@
            #:avatar/mime-type
            #:author/summary-type
            #:post/id
-           #:post/alternate-url))
+           #:post/alternate-url
+           #:post/reply
+           #:load-post
+           #:load-thread))

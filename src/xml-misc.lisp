@@ -9,7 +9,8 @@
                                           ("media" "http://purl.org/syndication/atommedia")
                                           ("poco" "http://portablecontacts.net/spec/1.0")
                                           ("ostatus" "http://ostatus.org/schema/1.0")
-                                          ("statusnet" "http://status.net/schema/api/1/")))
+                                          ("statusnet" "http://status.net/schema/api/1/")
+                                          ("thr" "http://purl.org/syndication/thread/1.0")))
   (defparameter *html-namespace* "http://www.w3.org/1999/xhtml")
   (defparameter *html-namespaces* (list (list "h" *html-namespace*))))
 
@@ -43,6 +44,14 @@
             default-value
             (error "No value found for expression: ~s" expression))
         (dom:node-value (xpath:first-node result)))))
+
+(defun element-by-xpath (expression node &key (default-value nil default-value-assigned-p))
+  (let ((result (xpath:evaluate expression node)))
+    (if (xpath:node-set-empty-p result)
+        (if default-value-assigned-p
+            default-value
+            (error "No value found for expression: ~s" expression))
+        (xpath:first-node result))))
 
 (defun debug-print-dom (doc &optional (stream *standard-output*))
   (dom:map-document (cxml:make-namespace-normalizer (cxml:make-character-stream-sink stream)) doc)

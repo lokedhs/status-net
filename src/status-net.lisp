@@ -1,5 +1,7 @@
 (in-package :status-net)
 
+(declaim (optimize (speed 0) (safety 3) (debug 3)))
+
 (define-condition status-net-error (error)
   ((message :initarg :message
             :reader status-net-error/message))
@@ -73,20 +75,23 @@
   (:metaclass atom-entity-class))
 
 (defclass post (timestamp-node)
-  ((id           :type (or null string)
-                 :reader post/id
-                 :xpath "atom:id/text()")
-   (title        :type (or null string)
-                 :reader post/title
-                 :xpath "atom:title/text()")
-   (conversation :type (or null string)
-                 :xpath "ostatus:conversation/text()")
-   (content-html :type (or null string)
-                 :reader post/content-html
-                 :xpath "atom:content[@type='html']/text()")
+  ((id            :type (or null string)
+                  :reader post/id
+                  :xpath "atom:id/text()")
+   (title         :type (or null string)
+                  :reader post/title
+                  :xpath "atom:title/text()")
+   (conversation  :type (or null string)
+                  :xpath "ostatus:conversation/text()")
+   (content-html  :type (or null string)
+                  :reader post/content-html
+                  :xpath "atom:content[@type='html']/text()")
    (alternate-url :type (or null string)
                   :reader post/alternate-url
-                  :xpath "atom:link[@rel='alternate'][@type='text/html']/@href"))
+                  :xpath "atom:link[@rel='alternate'][@type='text/html']/@href")
+   (reply         :type (or null string)
+                  :reader post/reply
+                  :xpath "thr:in-reply-to/@href"))
   (:metaclass atom-entity-class))
 
 (defclass note (post)
@@ -250,6 +255,14 @@
       (when need-close
         (close stream)))))
 
+(defun load-post (url)
+  (let ((doc (load-from-unknown-url url)))
+    (with-status-net-namespaces
+      (list (let ((author-element (element-by-xpath "/atom:entry/atom:author" doc)))
+              (fill-in-xpath-content 'author author-element))
+            (let ((entry-element (element-by-xpath "/atom:entry" doc)))
+              (parse-feed-entry entry-element))))))
+
 (defun parse-content-type (headers)
   (let ((v (assoc :content-type headers)))
     (if v
@@ -304,3 +317,13 @@
               for a in (gethash "aliases" json)
               when (alexandria:starts-with-subseq prefix a)
                 return (subseq a (length prefix))))))))
+
+(defun load-thread (post &key (limit 4))
+  (loop
+    with current-post = post
+    repeat limit
+    for url = (post/reply current-post)
+    while url
+    collect (let ((v (load-post url)))
+              (setq current-post (second v))
+              v)))
