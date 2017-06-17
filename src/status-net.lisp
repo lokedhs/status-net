@@ -165,6 +165,8 @@
         (let ((name (string-case:string-case (object-type)
                       ("http://activitystrea.ms/schema/1.0/comment" 'comment)
                       ("http://activitystrea.ms/schema/1.0/note" 'note)
+                      ;; Activities are recorded as notes, this is not correct but is acceptable for now
+                      ("http://activitystrea.ms/schema/1.0/activity" 'note)
                       (t nil))))
           (when name
             (fill-in-xpath-content name node)))
