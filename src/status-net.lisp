@@ -166,7 +166,11 @@
                       ("http://activitystrea.ms/schema/1.0/comment" 'comment)
                       ("http://activitystrea.ms/schema/1.0/note" 'note)
                       ;; Activities are recorded as notes, this is not correct but is acceptable for now
-                      ("http://activitystrea.ms/schema/1.0/activity" 'note)
+                      ("http://activitystrea.ms/schema/1.0/activity" 
+                       (if (equal (value-by-xpath "activity:verb/text()" node :default-value nil)
+                                  "http://activitystrea.ms/schema/1.0/delete")
+                           nil
+                           'note))
                       (t nil))))
           (when name
             (fill-in-xpath-content name node)))
